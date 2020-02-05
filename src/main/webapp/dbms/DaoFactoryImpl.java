@@ -1,8 +1,7 @@
 package main.webapp.dbms;
 
 import main.webapp.exceptions.daoexceptions.DAOConfigurationException;
-import main.webapp.model.dao.DaoFactory;
-import main.webapp.model.dao.UserDao;
+import main.webapp.model.dao.*;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,6 +30,26 @@ public class DaoFactoryImpl implements DaoFactory {
     @Override
     public UserDao getUserDao() {
         return new UserDaoMem(this);
+    }
+
+    @Override
+    public ColocationDao getColocationDao() {
+        return new ColocationDaoMem(this);
+    }
+
+    @Override
+    public AddressDao getAddressDao() {
+        return new AddressDaoMem(this);
+    }
+
+    @Override
+    public ServiceDao getServiceDao() {
+        return new ServiceDaoMem(this);
+    }
+
+    @Override
+    public AchievedServiceDao getAchievedServiceDao() {
+        return new AchievedServiceDaoMem(this);
     }
 
     public static DaoFactoryImpl getInstance() throws DAOConfigurationException {

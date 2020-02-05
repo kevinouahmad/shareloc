@@ -6,13 +6,53 @@
   <display-name>Archetype Created Web Application</display-name>
 
   <servlet>
-    <servlet-name>Home</servlet-name>
-    <servlet-class>main.webapp.controller.Home</servlet-class>
+    <servlet-name>Users</servlet-name>
+    <servlet-class>main.webapp.controller.Users</servlet-class>
   </servlet>
 
   <servlet-mapping>
-    <servlet-name>Home</servlet-name>
-    <url-pattern>/home</url-pattern>
+    <servlet-name>Users</servlet-name>
+    <url-pattern>/users</url-pattern>
+  </servlet-mapping>
+
+  <servlet>
+    <servlet-name>grantRights</servlet-name>
+    <servlet-class>main.webapp.controller.Rights</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>grantRights</servlet-name>
+    <url-pattern>/grantRights</url-pattern>
+  </servlet-mapping>
+
+  <servlet>
+    <servlet-name>Signin</servlet-name>
+    <servlet-class>main.webapp.controller.Connect</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>Signin</servlet-name>
+    <url-pattern>/signin</url-pattern>
+  </servlet-mapping>
+
+  <servlet>
+    <servlet-name>Colocations</servlet-name>
+    <servlet-class>main.webapp.controller.Colocations</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>Colocations</servlet-name>
+    <url-pattern>/colocations</url-pattern>
+  </servlet-mapping>
+
+  <servlet>
+    <servlet-name>Addresses</servlet-name>
+    <servlet-class>main.webapp.controller.Addresses</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>Addresses</servlet-name>
+    <url-pattern>/adresses</url-pattern>
   </servlet-mapping>
 
   <listener>

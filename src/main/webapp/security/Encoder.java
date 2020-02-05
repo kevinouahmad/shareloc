@@ -1,4 +1,4 @@
-package main.webapp.model;
+package main.webapp.security;
 
 import sun.plugin2.message.Message;
 

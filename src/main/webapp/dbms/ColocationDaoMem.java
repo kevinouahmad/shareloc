@@ -1,34 +1,35 @@
 package main.webapp.dbms;
 
 import main.webapp.exceptions.daoexceptions.DAOException;
+import main.webapp.model.Address;
+import main.webapp.model.Colocation;
 import main.webapp.model.User;
+import main.webapp.model.dao.ColocationDao;
 import main.webapp.model.dao.DaoFactory;
-import main.webapp.model.dao.UserDao;
 
-import java.security.NoSuchProviderException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
 
 import static main.webapp.dbms.utils.fermeturesSilencieuses;
 import static main.webapp.dbms.utils.initialisationRequetePreparee;
 
-public class UserDaoMem implements UserDao {
-    private static final String SQL_SELECT_PAR_EMAIL = "SELECT * FROM Utilisateur WHERE email = ?";
-    private static final String SQL_SELECT_ALL = "SELECT * FROM Utilisateur";
-    private static final String SQL_INSERT = "INSERT INTO Utilisateur (email, mot_de_passe, nom, date_inscription) VALUES (?, ?, ?, NOW())";
-    private static final String SQL_DELETE = "DELETE FROM Utilisateur WHERE email = ?";
-    private static final String SQL_UPDATE = "UPDATE Utilisateur SET nom = ?, mot_de_passe = ?, droits = ? WHERE email = ?";
+public class ColocationDaoMem implements ColocationDao {
+    private static final String SQL_SELECT_PAR_ID = "SELECT * FROM Colocation WHERE id = ?";
+    private static final String SQL_SELECT_ALL = "SELECT * FROM Colocation";
+    private static final String SQL_INSERT = "INSERT INTO Colocation (nom) VALUES (?)";
+    private static final String SQL_DELETE = "DELETE FROM Colocation WHERE id = ?";
+    private static final String SQL_UPDATE = "UPDATE Colocation SET nom = ? WHERE id = ?";
     private DaoFactory daoFactory;
 
-    public UserDaoMem(DaoFactoryImpl daoFactory) {
+    public ColocationDaoMem(DaoFactoryImpl daoFactory) {
         this.daoFactory = daoFactory;
     }
-
     @Override
-    public void persist(User user) {
+    public void persist(Colocation col) {
         Connection connexion = null;
         PreparedStatement preparedStatement = null;
         ResultSet valeursAutoGenerees = null;
@@ -36,7 +37,7 @@ public class UserDaoMem implements UserDao {
         try {
             /* Récupération d'une connexion depuis la Factory */
             connexion = daoFactory.getConnection();
-            preparedStatement = initialisationRequetePreparee( connexion, SQL_INSERT, true, user.getMail(), user.getPass(), user.getName() );
+            preparedStatement = initialisationRequetePreparee( connexion, SQL_INSERT, true,  col.getName());
             int statut = preparedStatement.executeUpdate();
             /* Analyse du statut retourné par la requête d'insertion */
             if ( statut == 0 ) {
@@ -46,7 +47,7 @@ public class UserDaoMem implements UserDao {
             valeursAutoGenerees = preparedStatement.getGeneratedKeys();
             if ( valeursAutoGenerees.next() ) {
                 /* Puis initialisation de la propriété id du bean Utilisateur avec sa valeur */
-                user.setId( valeursAutoGenerees.getInt( 1 ) );
+                col.setId( valeursAutoGenerees.getInt( 1 ) );
             } else {
                 throw new DAOException( "Échec de la création de l'utilisateur en base, aucun ID auto-généré retourné." );
             }
@@ -58,18 +59,18 @@ public class UserDaoMem implements UserDao {
     }
 
     @Override
-    public void remove(User user) {
+    public void remove(Colocation col) {
         Connection connexion = null;
         PreparedStatement preparedStatement = null;
 
         try {
             /* Récupération d'une connexion depuis la Factory */
             connexion = daoFactory.getConnection();
-            preparedStatement = initialisationRequetePreparee( connexion, SQL_DELETE, true, user.getMail());
+            preparedStatement = initialisationRequetePreparee( connexion, SQL_DELETE, true, col.getId());
             int statut = preparedStatement.executeUpdate();
             /* Analyse du statut retourné par la requête d'insertion */
             if ( statut == 0 ) {
-                throw new DAOException( "Échec de la suppression de l'utilisateur, aucune ligne ajoutée dans la table." );
+                throw new DAOException( "Échec de la suppression de la colocation, aucune ligne ajoutée dans la table." );
             }
 
         } catch ( SQLException e ) {
@@ -80,20 +81,41 @@ public class UserDaoMem implements UserDao {
     }
 
     @Override
-    public User find(String email) {
+    public void update(Colocation col) {
         Connection connexion = null;
         PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
-        User utilisateur = null;
 
         try {
             /* Récupération d'une connexion depuis la Factory */
             connexion = daoFactory.getConnection();
-            preparedStatement = initialisationRequetePreparee( connexion, SQL_SELECT_PAR_EMAIL, false, email );
+            preparedStatement = initialisationRequetePreparee( connexion, SQL_UPDATE, false, col.getName(), col.getId());
+            int statut = preparedStatement.executeUpdate();
+            /* Analyse du statut retourné par la requête d'insertion */
+            if ( statut == 0 ) {
+                throw new DAOException( "Échec de la modification de la colocation, aucune ligne ajoutée dans la table." );
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            fermeturesSilencieuses( preparedStatement, connexion );
+        }
+    }
+
+    @Override
+    public Colocation find(int id) {
+        Connection connexion = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Colocation colocation = null;
+
+        try {
+            /* Récupération d'une connexion depuis la Factory */
+            connexion = daoFactory.getConnection();
+            preparedStatement = initialisationRequetePreparee( connexion, SQL_SELECT_PAR_ID, false, id);
             resultSet = preparedStatement.executeQuery();
             /* Parcours de la ligne de données de l'éventuel ResulSet retourné */
             if ( resultSet.next() ) {
-                utilisateur = map( resultSet );
+                colocation = map( resultSet );
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );
@@ -101,16 +123,16 @@ public class UserDaoMem implements UserDao {
             fermeturesSilencieuses( resultSet, preparedStatement, connexion );
         }
 
-        return utilisateur;
+        return colocation;
     }
 
     @Override
-    public Collection<User> findAll() {
-        ArrayList<User> users = new ArrayList<>();
+    public Collection<Colocation> findAll() {
+        ArrayList<Colocation> colocations = new ArrayList<>();
         Connection connexion = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        User utilisateur = null;
+        Colocation colocation = null;
 
         try {
             /* Récupération d'une connexion depuis la Factory */
@@ -119,56 +141,20 @@ public class UserDaoMem implements UserDao {
             resultSet = preparedStatement.executeQuery();
             /* Parcours de la ligne de données de l'éventuel ResulSet retourné */
             while ( resultSet.next() ) {
-                users.add(map( resultSet ));
+                colocations.add(map( resultSet ));
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );
         } finally {
             fermeturesSilencieuses( resultSet, preparedStatement, connexion );
         }
-        return users;
+        return colocations;
     }
 
-    @Override
-    public void update(User user) {
-        Connection connexion = null;
-        PreparedStatement preparedStatement = null;
-
-        try {
-            /* Récupération d'une connexion depuis la Factory */
-            connexion = daoFactory.getConnection();
-            preparedStatement = initialisationRequetePreparee( connexion, SQL_UPDATE, false, user.getName(), user.getPass(), user.getPower(), user.getMail());
-            int statut = preparedStatement.executeUpdate();
-            /* Analyse du statut retourné par la requête d'insertion */
-            if ( statut == 0 ) {
-                throw new DAOException( "Échec de la modification de l'utilisateur, aucune ligne ajoutée dans la table." );
-            }
-        } catch ( SQLException e ) {
-            throw new DAOException( e );
-        } finally {
-            fermeturesSilencieuses( preparedStatement, connexion );
-        }
-    }
-
-    @Override
-    public void grantAdmin(User user) {
-        user.setPower("admin");
-        update(user);
-    }
-
-    /*
-     * Simple méthode utilitaire permettant de faire la correspondance (le
-     * mapping) entre une ligne issue de la table des utilisateurs (un
-     * ResultSet) et un bean Utilisateur.
-     */
-    private static User map( ResultSet resultSet ) throws SQLException {
-        User utilisateur = new User();
-        utilisateur.setId( resultSet.getInt( "id" ) );
-        utilisateur.setMail( resultSet.getString( "email" ) );
-        utilisateur.setPass( resultSet.getString( "mot_de_passe" ) );
-        utilisateur.setName( resultSet.getString( "nom" ) );
-        utilisateur.setRegisteredDate( resultSet.getTimestamp( "date_inscription" ) );
-        utilisateur.setPower(resultSet.getString("droits"));
-        return utilisateur;
+    private static Colocation map( ResultSet resultSet ) throws SQLException {
+        Colocation col = new Colocation();
+        col.setId( resultSet.getInt( "id" ) );
+        col.setName( resultSet.getString("nom"));
+        return col;
     }
 }

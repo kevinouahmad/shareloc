@@ -1,11 +1,11 @@
 package main.webapp.dbms;
 
 import main.webapp.exceptions.daoexceptions.DAOException;
+import main.webapp.model.Address;
 import main.webapp.model.User;
+import main.webapp.model.dao.AddressDao;
 import main.webapp.model.dao.DaoFactory;
-import main.webapp.model.dao.UserDao;
 
-import java.security.NoSuchProviderException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -15,20 +15,21 @@ import java.util.*;
 import static main.webapp.dbms.utils.fermeturesSilencieuses;
 import static main.webapp.dbms.utils.initialisationRequetePreparee;
 
-public class UserDaoMem implements UserDao {
-    private static final String SQL_SELECT_PAR_EMAIL = "SELECT * FROM Utilisateur WHERE email = ?";
-    private static final String SQL_SELECT_ALL = "SELECT * FROM Utilisateur";
-    private static final String SQL_INSERT = "INSERT INTO Utilisateur (email, mot_de_passe, nom, date_inscription) VALUES (?, ?, ?, NOW())";
-    private static final String SQL_DELETE = "DELETE FROM Utilisateur WHERE email = ?";
-    private static final String SQL_UPDATE = "UPDATE Utilisateur SET nom = ?, mot_de_passe = ?, droits = ? WHERE email = ?";
+public class AddressDaoMem implements AddressDao {
+    private final Map<Long, User> store = Collections.synchronizedMap(new TreeMap<Long, User>());
+    private static final String SQL_SELECT_PAR_ID = "SELECT * FROM Adresses WHERE id = ?";
+    private static final String SQL_SELECT_PAR_CODE = "SELECT * FROM Adresses WHERE code = ?";
+    private static final String SQL_SELECT_ALL = "SELECT * FROM Adresses";
+    private static final String SQL_INSERT = "INSERT INTO Adresses (numero, rue, code, ville, id_coloc) VALUES (?, ?, ?, ?, ?)";
+    private static final String SQL_DELETE = "DELETE FROM Adresses WHERE id = ?";
+    private static final String SQL_UPDATE = "UPDATE Adresses SET numero = ?, rue = ?, code = ?, ville = ? WHERE id = ?";
     private DaoFactory daoFactory;
 
-    public UserDaoMem(DaoFactoryImpl daoFactory) {
+    public AddressDaoMem(DaoFactoryImpl daoFactory) {
         this.daoFactory = daoFactory;
     }
-
     @Override
-    public void persist(User user) {
+    public void persist(Address address) {
         Connection connexion = null;
         PreparedStatement preparedStatement = null;
         ResultSet valeursAutoGenerees = null;
@@ -36,19 +37,19 @@ public class UserDaoMem implements UserDao {
         try {
             /* Récupération d'une connexion depuis la Factory */
             connexion = daoFactory.getConnection();
-            preparedStatement = initialisationRequetePreparee( connexion, SQL_INSERT, true, user.getMail(), user.getPass(), user.getName() );
+            preparedStatement = initialisationRequetePreparee( connexion, SQL_INSERT, true, address.getNumber(), address.getStreet(), address.getZipCode(), address.getTown(), address.getIdColoc() );
             int statut = preparedStatement.executeUpdate();
             /* Analyse du statut retourné par la requête d'insertion */
             if ( statut == 0 ) {
-                throw new DAOException( "Échec de la création de l'utilisateur, aucune ligne ajoutée dans la table." );
+                throw new DAOException( "Échec de la création de l'adresse, aucune ligne ajoutée dans la table." );
             }
             /* Récupération de l'id auto-généré par la requête d'insertion */
             valeursAutoGenerees = preparedStatement.getGeneratedKeys();
             if ( valeursAutoGenerees.next() ) {
-                /* Puis initialisation de la propriété id du bean Utilisateur avec sa valeur */
-                user.setId( valeursAutoGenerees.getInt( 1 ) );
+                /* Puis initialisation de la propriété id du bean Address avec sa valeur */
+                address.setId( valeursAutoGenerees.getInt( 1 ) );
             } else {
-                throw new DAOException( "Échec de la création de l'utilisateur en base, aucun ID auto-généré retourné." );
+                throw new DAOException( "Échec de la création de l'adresse en base, aucun ID auto-généré retourné." );
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );
@@ -58,18 +59,18 @@ public class UserDaoMem implements UserDao {
     }
 
     @Override
-    public void remove(User user) {
+    public void remove(Address address) {
         Connection connexion = null;
         PreparedStatement preparedStatement = null;
 
         try {
             /* Récupération d'une connexion depuis la Factory */
             connexion = daoFactory.getConnection();
-            preparedStatement = initialisationRequetePreparee( connexion, SQL_DELETE, true, user.getMail());
+            preparedStatement = initialisationRequetePreparee( connexion, SQL_DELETE, true, address.getId());
             int statut = preparedStatement.executeUpdate();
             /* Analyse du statut retourné par la requête d'insertion */
             if ( statut == 0 ) {
-                throw new DAOException( "Échec de la suppression de l'utilisateur, aucune ligne ajoutée dans la table." );
+                throw new DAOException( "Échec de la suppression de l'adresse, aucune ligne ajoutée dans la table." );
             }
 
         } catch ( SQLException e ) {
@@ -80,37 +81,65 @@ public class UserDaoMem implements UserDao {
     }
 
     @Override
-    public User find(String email) {
+    public void update(Address address) {
+
+    }
+
+    @Override
+    public Address find(int id) {
         Connection connexion = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        User utilisateur = null;
+        Address address = null;
 
         try {
             /* Récupération d'une connexion depuis la Factory */
             connexion = daoFactory.getConnection();
-            preparedStatement = initialisationRequetePreparee( connexion, SQL_SELECT_PAR_EMAIL, false, email );
+            preparedStatement = initialisationRequetePreparee( connexion, SQL_SELECT_PAR_ID, false, id );
             resultSet = preparedStatement.executeQuery();
             /* Parcours de la ligne de données de l'éventuel ResulSet retourné */
             if ( resultSet.next() ) {
-                utilisateur = map( resultSet );
+                address = map( resultSet );
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );
         } finally {
             fermeturesSilencieuses( resultSet, preparedStatement, connexion );
         }
-
-        return utilisateur;
+        return address;
     }
 
     @Override
-    public Collection<User> findAll() {
-        ArrayList<User> users = new ArrayList<>();
+    public Collection<Address> findByZipCode(int zipCode) {
+        ArrayList<Address> addresses = new ArrayList<>();
         Connection connexion = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        User utilisateur = null;
+        User address = null;
+
+        try {
+            /* Récupération d'une connexion depuis la Factory */
+            connexion = daoFactory.getConnection();
+            preparedStatement = initialisationRequetePreparee( connexion, SQL_SELECT_PAR_CODE, false, zipCode);
+            resultSet = preparedStatement.executeQuery();
+            /* Parcours de la ligne de données de l'éventuel ResulSet retourné */
+            while ( resultSet.next() ) {
+                addresses.add(map( resultSet ));
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            fermeturesSilencieuses( resultSet, preparedStatement, connexion );
+        }
+        return addresses;
+    }
+
+    @Override
+    public Collection<Address> findAll() {
+        ArrayList<Address> addresses = new ArrayList<>();
+        Connection connexion = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
 
         try {
             /* Récupération d'une connexion depuis la Factory */
@@ -119,56 +148,24 @@ public class UserDaoMem implements UserDao {
             resultSet = preparedStatement.executeQuery();
             /* Parcours de la ligne de données de l'éventuel ResulSet retourné */
             while ( resultSet.next() ) {
-                users.add(map( resultSet ));
+                addresses.add(map( resultSet ));
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );
         } finally {
             fermeturesSilencieuses( resultSet, preparedStatement, connexion );
         }
-        return users;
+        return addresses;
     }
 
-    @Override
-    public void update(User user) {
-        Connection connexion = null;
-        PreparedStatement preparedStatement = null;
-
-        try {
-            /* Récupération d'une connexion depuis la Factory */
-            connexion = daoFactory.getConnection();
-            preparedStatement = initialisationRequetePreparee( connexion, SQL_UPDATE, false, user.getName(), user.getPass(), user.getPower(), user.getMail());
-            int statut = preparedStatement.executeUpdate();
-            /* Analyse du statut retourné par la requête d'insertion */
-            if ( statut == 0 ) {
-                throw new DAOException( "Échec de la modification de l'utilisateur, aucune ligne ajoutée dans la table." );
-            }
-        } catch ( SQLException e ) {
-            throw new DAOException( e );
-        } finally {
-            fermeturesSilencieuses( preparedStatement, connexion );
-        }
-    }
-
-    @Override
-    public void grantAdmin(User user) {
-        user.setPower("admin");
-        update(user);
-    }
-
-    /*
-     * Simple méthode utilitaire permettant de faire la correspondance (le
-     * mapping) entre une ligne issue de la table des utilisateurs (un
-     * ResultSet) et un bean Utilisateur.
-     */
-    private static User map( ResultSet resultSet ) throws SQLException {
-        User utilisateur = new User();
-        utilisateur.setId( resultSet.getInt( "id" ) );
-        utilisateur.setMail( resultSet.getString( "email" ) );
-        utilisateur.setPass( resultSet.getString( "mot_de_passe" ) );
-        utilisateur.setName( resultSet.getString( "nom" ) );
-        utilisateur.setRegisteredDate( resultSet.getTimestamp( "date_inscription" ) );
-        utilisateur.setPower(resultSet.getString("droits"));
-        return utilisateur;
+    private static Address map( ResultSet resultSet ) throws SQLException {
+        Address address = new Address();
+        address.setId( resultSet.getInt( "id" ) );
+        address.setNumber( resultSet.getInt( "numero" ) );
+        address.setStreet( resultSet.getString( "rue" ) );
+        address.setZipCode( resultSet.getInt( "code" ) );
+        address.setTown( resultSet.getString( "ville" ) );
+        address.setIdColoc( resultSet.getInt( "id_coloc") );
+        return address;
     }
 }

@@ -16,7 +16,6 @@ import static main.webapp.dbms.utils.fermeturesSilencieuses;
 import static main.webapp.dbms.utils.initialisationRequetePreparee;
 
 public class AddressDaoMem implements AddressDao {
-    private final Map<Long, User> store = Collections.synchronizedMap(new TreeMap<Long, User>());
     private static final String SQL_SELECT_PAR_ID = "SELECT * FROM Adresses WHERE id = ?";
     private static final String SQL_SELECT_PAR_CODE = "SELECT * FROM Adresses WHERE code = ?";
     private static final String SQL_SELECT_ALL = "SELECT * FROM Adresses";
@@ -82,7 +81,23 @@ public class AddressDaoMem implements AddressDao {
 
     @Override
     public void update(Address address) {
+        Connection connexion = null;
+        PreparedStatement preparedStatement = null;
 
+        try {
+            /* Récupération d'une connexion depuis la Factory */
+            connexion = daoFactory.getConnection();
+            preparedStatement = initialisationRequetePreparee( connexion, SQL_UPDATE, false, address.getNumber(), address.getStreet(), address.getZipCode(),address.getTown(),address.getId());
+            int statut = preparedStatement.executeUpdate();
+            /* Analyse du statut retourné par la requête d'insertion */
+            if ( statut == 0 ) {
+                throw new DAOException( "Échec de la modification de la colocation, aucune ligne ajoutée dans la table." );
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            fermeturesSilencieuses( preparedStatement, connexion );
+        }
     }
 
     @Override

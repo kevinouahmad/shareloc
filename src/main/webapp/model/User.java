@@ -14,7 +14,7 @@ import java.sql.Timestamp;
 
 public class User {
 
-    private int      id;
+    private int id;
     private String    mail;
     private String    pass;
     private String    name;
@@ -24,7 +24,7 @@ public class User {
     public int getId() {
         return id;
     }
-    public void setId( int id ) {
+    public void setId(int id ) {
         this.id = id;
     }
 

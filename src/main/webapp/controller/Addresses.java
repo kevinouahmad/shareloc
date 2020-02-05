@@ -89,7 +89,7 @@ public class Addresses extends HttpServlet {
         PrintWriter out = response.getWriter();
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
-        Address toUpdate = addressDao.find((Integer.parseInt(request.getParameter("mail"))));
+        Address toUpdate = addressDao.find((Integer.parseInt(request.getParameter("id"))));
 
         Integer numero = Integer.parseInt(request.getParameter("numero"));
         Integer code = Integer.parseInt(request.getParameter("code"));
